@@ -1,0 +1,110 @@
+---
+- 
+  hosts: "Airflow"
+  gather_facts: false
+  become: yes
+  tasks: 
+    - 
+      name: "Check Network Connection"
+      ping: ~
+      tags:
+        - FullSetup
+        - Connection_Checking
+    - name: Add Docker’s official GPG key
+      shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+      tags:
+        - FullSetup
+        - Setup
+        - Update 
+    - name: Add Docker’s official Finter Print key
+      shell: apt-key fingerprint 0EBFCD88
+      tags:
+        - FullSetup
+        - Setup
+        - Update 
+    - name: Add Repository
+      shell: add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+      tags:
+        - FullSetup
+        - Setup
+        - Update 
+    - name: Update apt-get repo and cache
+      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+      tags:
+        - FullSetup
+        - Setup
+        - Update 
+    - name: Install GIT & TIG
+      action: apt pkg={{ item }} state=present
+      with_items:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg-agent
+        - software-properties-common
+        - docker-ce=5:19.03.13~3-0~ubuntu-bionic
+        - docker-ce-cli=5:19.03.13~3-0~ubuntu-bionic
+        - containerd.io=1.3.7-1
+        - nfs-common
+      tags:
+        - FullSetup
+        - Setup
+        - Update
+    - name: Custom adding Docker-Composer
+      shell: | 
+             curl -s -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose > /dev/null
+             chmod +x /usr/local/bin/docker-compose 
+             ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+      tags:
+        - FullSetup
+        - Once
+    - name: Create Airflow Project Directory
+      file:
+        path: /root/AirFlow
+        state: directory
+      tags:
+        - FullSetup
+        - Setup
+        - Update
+    - name: Copy file with owner and permissions
+      synchronize:
+        src: ../Docker-Compose
+        dest: /root/AirFlow
+        delete: yes
+      tags:
+        - FullSetup
+        - Setup
+        - Update
+    - name: Add Docker’s official GPG key
+      shell: |
+              docker volume create dags-space
+              mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport "{{ mount_dns }}":/ /var/lib/docker/volumes/dags-space/_data
+      tags:
+        - FullSetup
+        - Setup
+        - Update
+    - name: Copy file with owner and permissions
+      synchronize:
+        src: ../Dags/
+        dest: /var/lib/docker/volumes/dags-space/_data
+        delete: yes
+        rsync_opts:
+           - "--exclude=__pycache__"
+      tags:
+        - FullSetup
+        - Setup
+        - Deployment
+    - name: Startup AirFlow Project
+      shell: docker-compose --env-file=.env.{{ env }} up -d
+      args:
+        chdir: /root/AirFlow/Docker-Compose
+      tags:
+        - startAirFlow
+    - name: Stop AirFlow Project
+      shell: docker-compose --env-file=.env.{{ env }} down
+      args:
+        chdir: /root/AirFlow/Docker-Compose
+      tags:
+        - stopAirFlow
+    
+    

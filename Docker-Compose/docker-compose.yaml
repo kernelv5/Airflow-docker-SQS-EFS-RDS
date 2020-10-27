@@ -1,0 +1,69 @@
+version: "3.8"
+services:
+    ImageBuild:
+            build:
+                context: ./ContainerImage
+                dockerfile: Dockerfile
+            image: airflow_lifung_v01:latest
+    Webserver:
+        image: 'airflow_lifung_v01:latest'
+        depends_on:
+            - ImageBuild
+        environment:
+            - AIRFLOW__CORE__SQL_ALCHEMY_CONN=${AIRFLOW__CORE__SQL_ALCHEMY_CONN}
+            - AIRFLOW__CELERY__RESULT_BACKEND=${AIRFLOW__CELERY__RESULT_BACKEND}
+            - AIRFLOW__CELERY__BROKER_URL=${AIRFLOW__CELERY__BROKER_URL}
+            - AIRFLOW__CELERY__DEFAULT_QUEUE=${AIRFLOW__CELERY__DEFAULT_QUEUE}
+            - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+            - AIRFLOW__CORE__DAGS_FOLDER=${AIRFLOW__CORE__DAGS_FOLDER}
+            - AIRFLOW__CORE__LOAD_EXAMPLES=False
+            - AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL=10
+            - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+        command: webserver
+        ports:
+            - "8080:8080"
+        volumes:
+            - dags-space:/root/airflow/dags/
+    Worker:
+        image: 'airflow_lifung_v01:latest'
+        depends_on:
+            - ImageBuild
+            - Webserver
+        environment:
+            - AIRFLOW__CORE__SQL_ALCHEMY_CONN=${AIRFLOW__CORE__SQL_ALCHEMY_CONN}
+            - AIRFLOW__CELERY__RESULT_BACKEND=${AIRFLOW__CELERY__RESULT_BACKEND}
+            - AIRFLOW__CELERY__BROKER_URL=${AIRFLOW__CELERY__BROKER_URL}
+            - AIRFLOW__CELERY__DEFAULT_QUEUE=${AIRFLOW__CELERY__DEFAULT_QUEUE}
+            - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+            - AIRFLOW__CORE__DAGS_FOLDER=${AIRFLOW__CORE__DAGS_FOLDER}
+            - AIRFLOW__CORE__LOAD_EXAMPLES=False
+            - AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL=10
+            - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+        command: worker
+        volumes:
+            - dags-space:/root/airflow/dags/
+    Scheduler:
+        image: 'airflow_lifung_v01:latest'
+        depends_on:
+            - ImageBuild
+            - Webserver
+        environment:
+            - AIRFLOW__CORE__SQL_ALCHEMY_CONN=${AIRFLOW__CORE__SQL_ALCHEMY_CONN}
+            - AIRFLOW__CELERY__RESULT_BACKEND=${AIRFLOW__CELERY__RESULT_BACKEND}
+            - AIRFLOW__CELERY__BROKER_URL=${AIRFLOW__CELERY__BROKER_URL}
+            - AIRFLOW__CELERY__DEFAULT_QUEUE=${AIRFLOW__CELERY__DEFAULT_QUEUE}
+            - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+            - AIRFLOW__CORE__DAGS_FOLDER=${AIRFLOW__CORE__DAGS_FOLDER}
+            - AIRFLOW__CORE__LOAD_EXAMPLES=False
+            - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+            - AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL=10
+        command: scheduler
+        volumes:
+            - dags-space:/root/airflow/dags/
+
+volumes:
+    dags-space:
+        external: true
+        name: dags-space
+
+
