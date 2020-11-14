@@ -110,3 +110,7 @@ Initiate Airflow Database
 ## Exit from ec2
 
 ansible-playbook -i hosts playbook.yaml --tag startAirFlow --extra-vars "mount_dns=$Result_EFS env=$TF_VAR_env"
+
+
+### Sending Apache Airflow Logs to S3
+https://kernelv5.medium.com/sending-apache-airflow-logs-to-s3-86f2c0c82ef5
